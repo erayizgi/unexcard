@@ -251,6 +251,9 @@ class User extends CI_Controller {
 						}
 
 					}
+					if($this->input->post("social_media")){
+						$socMedia = $this->input->post("social_media");
+					}
 						$cardName = $this->input->post("cardName",TRUE);
 						$fax = $this->input->post("fax",TRUE);
 						$webSite = $this->input->post("webSite",TRUE);
@@ -261,7 +264,7 @@ class User extends CI_Controller {
 						$titleID = $this->input->post("title",TRUE);
 						$companyName = $this->input->post("companyName",TRUE);
 						$name = $this->input->post("name",TRUE);
-						if($cardID = $this->User_model->createCard($userID,$country,$province,$district,$address,$cardName, $webSite, $phone1, $phone2, $phone3, $email, $titleID,$companyName, $name,$fax)){
+						if($cardID = $this->User_model->createCard($userID,$country,$province,$district,$address,$cardName, $webSite, $phone1, $phone2, $phone3, $email, $titleID,$companyName, $name,$fax,$socMedia)){
 							$this->qrLib->png(base_url()."index.php/user/getCard/".$cardID, "cardImages/".$cardID.".png", "L", "10", 2);
 							$output = array(
 								"result" => true,
@@ -313,7 +316,7 @@ class User extends CI_Controller {
 		//if ($this->checkPost()) {
 		//	$this->key = $this->input->post("key");
 			// if ($this->User_model->checkKey($key)) {
-				if($card = $this->User_model->getCard($cardID)->row_array()){
+				if($card = $this->User_model->getCard($cardID)){
 					$output = array(
 						"result" => true,
 						"card" => $card
@@ -347,6 +350,177 @@ class User extends CI_Controller {
 		// 		);
 		// }
 		$this->output->set_content_type("application/json")->set_output(json_encode($output));
+	}
+	public function getMyCards()
+	{
+		if($this->checkPost()){
+			$this->key = $this->input->post("key");
+			if($this->User_model->checkKey($this->key)){
+				$sessionKey = $this->input->post("sessionKey",TRUE);
+				if($user = $this->User_model->loginCheck($sessionKey)){
+					$user = $user[0];
+					$userID = $user["ID"];
+					if($cards = $this->User_model->getMyCards($userID)){
+						$output = array(
+							"result" => true,
+							"cards" => $cards
+							);
+					}else{
+						$output = array(
+							"result" => false,
+							"error" => array(
+								"type" => "no_cards",
+								"message" => "There is no card belongs to given user"
+								)
+							);
+					}
+				}else{
+					$output = array(
+						"result" => false,
+						"error" => array(
+							"type" => "session_not_valid",
+							"message" => "Invalid Session Key"
+							)
+						);
+				}
+			}else{
+				$output = array(
+					"result" => false,
+					"error" => array(
+						"type" => "Invalid_key",
+						"message" => "Invalid API Key"
+						)
+					);
+			}
+		}else{
+			$output = array(
+				"result" => false,
+				"error" => array(
+					"type" => "Invalid_key",
+					"message" => "Invalid API Key"
+					)
+				);			
+		}
+		$this->output->set_content_type('application/json')->set_output(json_encode($output));
+	}
+	public function getMyReceivedCards()
+	{
+		if($this->checkPost()){
+			$this->key = $this->input->post("key");
+			if($this->User_model->checkKey($this->key)){
+				$sessionKey = $this->input->post("sessionKey",TRUE);
+				if($user = $this->User_model->loginCheck($sessionKey)){
+					$user = $user[0];
+					$userID = $user["ID"];
+					if($cards = $this->User_model->getMyReceivedCards($userID)){
+						$output = array(
+							"result" => true,
+							"cards" => $cards
+							);
+					}else{
+						$output = array(
+							"result" => false,
+							"error" => array(
+								"type" => "no_cards_received",
+								"message" => "There is no card received from given user"
+								)
+							);
+					}
+				}else{
+					$output = array(
+						"result" => false,
+						"error" => array(
+							"type" => "session_not_valid",
+							"message" => "Invalid Session Key"
+							)
+						);
+				}
+			}else{
+				$output = array(
+					"result" => false,
+					"error" => array(
+						"type" => "Invalid_key",
+						"message" => "Invalid API Key"
+						)
+					);
+			}
+		}else{
+			$output = array(
+				"result" => false,
+				"error" => array(
+					"type" => "Invalid_key",
+					"message" => "Invalid API Key"
+					)
+				);			
+		}
+		$this->output->set_content_type('application/json')->set_output(json_encode($output));
+		
+	}
+	public function receiveACard()
+	{
+		if ($this->checkPost()) {
+			$this->key = $this->input->post("sessionKey",TRUE);
+			if ($user = $this->User_model->loginCheck($this->key)) {
+				$user = $user[0];
+				$userID = $user["ID"];
+				if ($this->input->post("receiving_card_id",TRUE)) {
+					$receivingCard = $this->input->post("receiving_card_id",TRUE);
+					if ($this->User_model->checkCard($receivingCard)) {
+						if($this->User_model->receiveACard($userID,$receivingCard)){
+							$output = array(
+								"result" => true,
+								"receiving_user" => $userID,
+								"received_card" => $receivingCard
+								);
+						}else{
+							$output = array(
+								"result" => true,
+								"error" => array(
+									"type" => "card_already_received",
+									"message" => "This card received by this user already"
+									)
+								);
+						}
+					} else {
+						$output = array(
+							"result" => false,
+							"error" => array(
+								"type" => "receiving_card_id_not_valid",
+								"message" => "Receiving card id is not valid"
+								)
+							);
+					}
+					
+				} else {
+					$output = array(
+						"result" => false,
+						"error" => array(
+							"type" => "receiving_card_id_null",
+							"message" => "Receiving card id can't be null"
+							)
+						);
+				}
+				
+			} else {
+				$output = array(
+					"result" => false,
+					"error" => array(
+						"type" => "session_not_valid",
+						"message" => "Invalid Session Key"
+						)
+					);					
+			}
+			
+		} else {
+			$output = array(
+				"result" => false,
+				"error" => array(
+					"type" => "Invalid_key",
+					"message" => "Invalid API Key"
+					)
+				);	
+		}
+		$this->output->set_content_type('application/json')->set_output(json_encode($output));
 	}
 }
 

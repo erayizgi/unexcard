@@ -234,12 +234,17 @@ class User extends CI_Controller {
 				if($user = $this->User_model->loginCheck($this->input->post("sessionKey",TRUE))){
 					$user = $user[0];
 					$userID = $user["ID"];
+					$country = null;
+					$province = null;
+					$district = null;
+					$address = null;
+
 					if($this->input->post("is_address")){
-						if($this->input->post("Country") && $this->input->post("Province") && $this->input->post("District") && $this->input->post("Address")){
-							$country = $this->input->post("Country",TRUE);
-							$province = $this->input->post("Province",TRUE);
-							$district = $this->input->post("District",TRUE);
-							$address = $this->input->post("Address");
+						if($this->input->post("country") && $this->input->post("province") && $this->input->post("district") && $this->input->post("address")){
+							$country = $this->input->post("country",TRUE);
+							$province = $this->input->post("province",TRUE);
+							$district = $this->input->post("district",TRUE);
+							$address = $this->input->post("address");
 						}else{
 							$output = array(
 								"result" => false,
@@ -251,9 +256,6 @@ class User extends CI_Controller {
 						}
 
 					}
-					if($this->input->post("social_media")){
-						$socMedia = $this->input->post("social_media");
-					}
 						$cardName = $this->input->post("cardName",TRUE);
 						$fax = $this->input->post("fax",TRUE);
 						$webSite = $this->input->post("webSite",TRUE);
@@ -264,7 +266,7 @@ class User extends CI_Controller {
 						$titleID = $this->input->post("title",TRUE);
 						$companyName = $this->input->post("companyName",TRUE);
 						$name = $this->input->post("name",TRUE);
-						if($cardID = $this->User_model->createCard($userID,$country,$province,$district,$address,$cardName, $webSite, $phone1, $phone2, $phone3, $email, $titleID,$companyName, $name,$fax,$socMedia)){
+						if($cardID = $this->User_model->createCard($userID,$country,$province,$district,$address,$cardName, $webSite, $phone1, $phone2, $phone3, $email, $titleID,$companyName, $name,$fax)){
 							$this->qrLib->png(base_url()."index.php/user/getCard/".$cardID, "cardImages/".$cardID.".png", "L", "10", 2);
 							$output = array(
 								"result" => true,
@@ -310,6 +312,56 @@ class User extends CI_Controller {
 				);
 		}
 		$this->output->set_content_type("application/json")->set_output(json_encode($output));
+	}
+	public function insertSocialMediaToCard()
+	{
+		if($this->checkPost()){
+			$this->key = $this->input->post("key");
+			if ($this->User_model->checkKey($this->key)) {
+				if($user = $this->User_model->loginCheck($this->input->post("sessionKey",TRUE))){
+					$user = $user[0];
+					if ($this->User_model->socialMediaOfCard($this->input->post("cardID",TRUE),$this->input->post("socialMediaID",TRUE),$this->input->post("URL",TRUE),$user["ID"])) {
+						$output = array(
+							"result" => true
+							);
+					} else {
+						$output = array(
+							"result" => false,
+							"error" => array(
+								"type" => "social_media_error",
+								"message" => "Social Media Error"
+								)
+							);
+					}
+				}else{
+					$output = array(
+						"result" => false,
+						"error" => array(
+							"type" => "session_not_valid",
+							"message" => "Invalid Session Key"
+							)
+						);
+				}
+			} else {
+				$output = array(
+					"result" => false,
+					"error" => array(
+						"type" => "Invalid_key",
+						"message" => "Invalid API Key"
+						)
+					);
+			}
+			
+		}else{
+			$output = array(
+				"result" => false,
+				"error" => array(
+					"type" => "Invalid_key",
+					"message" => "Invalid API Key"
+					)
+				);
+		}
+		$this->output->set_content_type('application/json')->set_output(json_encode($output));
 	}
 	public function getCard($cardID)
 	{
@@ -474,7 +526,7 @@ class User extends CI_Controller {
 								);
 						}else{
 							$output = array(
-								"result" => true,
+								"result" => false,
 								"error" => array(
 									"type" => "card_already_received",
 									"message" => "This card received by this user already"

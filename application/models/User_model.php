@@ -61,8 +61,9 @@ class User_model extends CI_Model {
 			return false;
 		}
 	}
-	public function createCard($userID,$country = NULL,$province = NULL,$district = null,$address = null,$cardName = null, $website = null, $phone1 = null, $phone2 = null, $phone3 = null, $email = null, $titleID = null,$companyName = null, $name,$fax =null,$socialMedia=null)
+	public function createCard($userID,$country = NULL,$province = NULL,$district = null,$address = null,$cardName = null, $website = null, $phone1 = null, $phone2 = null, $phone3 = null, $email = null, $titleID = null,$companyName = null, $name,$fax =null)
 	{
+		$addressID = null;
 		if($country != NULL && $province != NULL && $district != NULL && $address != NULL){
 			$this->insertAddress($country,$province,$district,$address);
 			$addressID = $this->db->insert_id();
@@ -88,37 +89,40 @@ class User_model extends CI_Model {
 				"My" => TRUE
 				);
 			if($this->db->insert("UserCard",$dt)){
-				if(count($socialMedia)>0){
-					foreach ($socialMedia as $key => $value) {
-						if($socialID = $this->checkSocialMedia($userID,$socialMedia[$key]["SocialMediaID"],$socialMedia[$key]["URL"])){
-							$dt = array(
-								"CardID" => $cardID,
-								"UserSocialID" => $socialID
-								);
-							if(!$this->db->insert("CardUserSocials",$dt)){
-								break;
-							}
-						}else{
-							if($socialID = $this->insertSocialMedia($userID,$socialMedia[$key]["SocialMediaID"],$socialMedia[$key]["URL"])){
-								$dt = array(
-									"CardID" => $cardID,
-									"UserSocialID" => $socialID
-									);
-								if(!$this->db->insert("CardUserSocials",$dt)){
-									break;
-								}
-							}else{
-								break;
-							}
-						}
-					}
-					return $cardID;
-				}
+				return $cardID;
 			}else{
 				return false;
 			}
 		}else{
 			return false;
+		}
+	}
+	public function socialMediaOfCard($cardID,$socialMediaID,$URL,$userID)
+	{
+		if($socialID = $this->checkSocialMedia($userID,$socialMediaID,$URL)){
+			$dt = array(
+				"CardID" => $cardID,
+				"UserSocialID" => $socialID
+				);
+			if(!$this->db->insert("CardUserSocials",$dt)){
+				return false;
+			}else{
+				return true;
+			}
+		}else{
+			if($socialID = $this->insertSocialMedia($userID,$socialMediaID,$URL)){
+				$dt = array(
+					"CardID" => $cardID,
+					"UserSocialID" => $socialID
+					);
+				if(!$this->db->insert("CardUserSocials",$dt)){
+					return false;
+				}else{
+					return true;
+				}
+			}else{
+				return false;
+			}
 		}
 	}
 	public function insertAddress($country,$province,$district,$address)
@@ -142,7 +146,8 @@ class User_model extends CI_Model {
 	public function getCard($cardID)
 	{
 		//SELECT * FROM Cards LEFT JOIN Addresses ON Addresses.ID = Cards.AddressID
-		$this->db->join("Addresses","Addresses.ID = Cards.AddressID");
+		$this->db->select("*,Cards.ID AS cardID");
+		$this->db->join("Addresses","Addresses.ID = Cards.AddressID","left");
 		$this->db->where("Cards.ID",$cardID);
 		$card = $this->db->get("Cards");
 		if($card->num_rows()>0){
